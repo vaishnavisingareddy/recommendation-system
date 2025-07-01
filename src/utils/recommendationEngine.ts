@@ -48,7 +48,7 @@ export function calculateCosineSimilarity(vec1: number[], vec2: number[]): numbe
   return dotProduct / (magnitude1 * magnitude2);
 }
 
-// Calculate similarity between two places
+// Enhanced similarity calculation with weighted factors
 export function calculateSimilarity(place1: Place, place2: Place): number {
   // Create feature vectors for both places
   const features1 = [...place1.features, place1.type, place1.region, place1.bestSeason].join(' ');
@@ -57,10 +57,34 @@ export function calculateSimilarity(place1: Place, place2: Place): number {
   const documents = [features1, features2];
   const tfidfMatrix = calculateTfIdf(documents);
   
-  return calculateCosineSimilarity(tfidfMatrix[0], tfidfMatrix[1]);
+  const contentSimilarity = calculateCosineSimilarity(tfidfMatrix[0], tfidfMatrix[1]);
+  
+  // Additional similarity factors with weights
+  let bonusScore = 0;
+  
+  // Strong bonus for same type (beaches, hill-stations, etc.)
+  if (place1.type === place2.type) {
+    bonusScore += 0.3;
+  }
+  
+  // Moderate bonus for same region
+  if (place1.region === place2.region) {
+    bonusScore += 0.15;
+  }
+  
+  // Small bonus for same season
+  if (place1.bestSeason === place2.bestSeason) {
+    bonusScore += 0.1;
+  }
+  
+  // Bonus for overlapping features
+  const commonFeatures = place1.features.filter(f => place2.features.includes(f));
+  bonusScore += (commonFeatures.length / Math.max(place1.features.length, place2.features.length)) * 0.2;
+  
+  return Math.min(contentSimilarity + bonusScore, 1.0);
 }
 
-// Get recommendations based on user preferences
+// Get highly relevant recommendations with strict filtering
 export function getRecommendations(selectedPlaces: Place[], allPlaces: Place[]): Place[] {
   if (selectedPlaces.length === 0) {
     return allPlaces.slice(0, 10); // Return top 10 if no preferences
@@ -73,16 +97,16 @@ export function getRecommendations(selectedPlaces: Place[], allPlaces: Place[]):
 
   // Calculate similarity scores for each candidate place
   const recommendations = candidatePlaces.map(candidate => {
-    // Calculate average similarity with all selected places
+    // Calculate maximum similarity with any selected place (not average)
     const similarities = selectedPlaces.map(selected => 
       calculateSimilarity(selected, candidate)
     );
     
-    const avgSimilarity = similarities.reduce((sum, sim) => sum + sim, 0) / similarities.length;
+    const maxSimilarity = Math.max(...similarities);
     
-    // Boost score based on rating
-    const ratingBoost = candidate.rating / 5;
-    const finalScore = avgSimilarity * 0.8 + ratingBoost * 0.2;
+    // Boost score based on rating (smaller impact)
+    const ratingBoost = (candidate.rating - 4.0) / 10; // Only boost if rating > 4.0
+    const finalScore = maxSimilarity + Math.max(0, ratingBoost);
     
     return {
       ...candidate,
@@ -90,10 +114,20 @@ export function getRecommendations(selectedPlaces: Place[], allPlaces: Place[]):
     };
   });
 
+  // Apply strict similarity threshold - only show highly relevant places
+  const SIMILARITY_THRESHOLD = 0.35; // Increased threshold for better relevance
+  
+  const relevantRecommendations = recommendations.filter(
+    place => place.similarityScore >= SIMILARITY_THRESHOLD
+  );
+
+  console.log(`Found ${relevantRecommendations.length} relevant recommendations out of ${recommendations.length} candidates`);
+  console.log('Top similarities:', relevantRecommendations.slice(0, 5).map(r => ({ name: r.name, score: r.similarityScore.toFixed(3) })));
+
   // Sort by similarity score and return top recommendations
-  return recommendations
+  return relevantRecommendations
     .sort((a, b) => b.similarityScore - a.similarityScore)
-    .slice(0, 15);
+    .slice(0, 12); // Reduced number to focus on quality over quantity
 }
 
 // Get similar places based on a single place
@@ -105,7 +139,10 @@ export function getSimilarPlaces(targetPlace: Place, allPlaces: Place[], count: 
     similarityScore: calculateSimilarity(targetPlace, place)
   }));
 
+  const SIMILARITY_THRESHOLD = 0.3;
+  
   return similarPlaces
+    .filter(place => place.similarityScore >= SIMILARITY_THRESHOLD)
     .sort((a, b) => b.similarityScore - a.similarityScore)
     .slice(0, count);
 }
