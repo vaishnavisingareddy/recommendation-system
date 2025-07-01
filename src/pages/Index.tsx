@@ -3,44 +3,33 @@ import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import TravelQuiz from '@/components/TravelQuiz';
+import { Badge } from '@/components/ui/badge';
 import RecommendationEngine from '@/components/RecommendationEngine';
 import FavoritesList from '@/components/FavoritesList';
 import { Place } from '@/types/travel';
+import { places } from '@/data/places';
+import { Star } from 'lucide-react';
 
 const Index = () => {
-  const [currentStep, setCurrentStep] = useState<'home' | 'quiz' | 'recommendations'>('home');
+  const [currentStep, setCurrentStep] = useState<'home' | 'recommendations'>('home');
   const [selectedPlaces, setSelectedPlaces] = useState<Place[]>([]);
   const [favorites, setFavorites] = useState<Place[]>([]);
 
-  const featuredDestinations = [
-    {
-      id: 1,
-      name: "Goa Beaches",
-      image: "https://images.unsplash.com/photo-1512343879784-a960bf40e7f2?w=800&h=600&fit=crop",
-      description: "Golden beaches and vibrant nightlife"
-    },
-    {
-      id: 2,
-      name: "Kashmir Valley",
-      image: "https://images.unsplash.com/photo-1505832018823-50331d70d237?w=800&h=600&fit=crop",
-      description: "Paradise on earth with snow-capped mountains"
-    },
-    {
-      id: 3,
-      name: "Rajasthan Desert",
-      image: "https://images.unsplash.com/photo-1477587458883-47145ed94245?w=800&h=600&fit=crop",
-      description: "Royal palaces and golden sand dunes"
-    }
-  ];
-
-  const handleStartQuiz = () => {
-    setCurrentStep('quiz');
+  const handlePlaceSelection = (place: Place) => {
+    setSelectedPlaces(prev => {
+      const exists = prev.find(p => p.id === place.id);
+      if (exists) {
+        return prev.filter(p => p.id !== place.id);
+      } else {
+        return [...prev, place];
+      }
+    });
   };
 
-  const handleQuizComplete = (places: Place[]) => {
-    setSelectedPlaces(places);
-    setCurrentStep('recommendations');
+  const handleSubmit = () => {
+    if (selectedPlaces.length > 0) {
+      setCurrentStep('recommendations');
+    }
   };
 
   const handleBackToHome = () => {
@@ -59,14 +48,9 @@ const Index = () => {
     });
   };
 
-  if (currentStep === 'quiz') {
-    return (
-      <TravelQuiz
-        onComplete={handleQuizComplete}
-        onBack={handleBackToHome}
-      />
-    );
-  }
+  const isSelected = (place: Place) => {
+    return selectedPlaces.some(p => p.id === place.id);
+  };
 
   if (currentStep === 'recommendations') {
     return (
@@ -82,77 +66,117 @@ const Index = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-orange-50 to-red-50">
       {/* Hero Section */}
-      <section className="relative h-screen flex items-center justify-center overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-r from-orange-600/20 to-red-600/20 z-10"></div>
-        <div 
-          className="absolute inset-0 bg-cover bg-center bg-no-repeat transform scale-105"
-          style={{
-            backgroundImage: "url('https://images.unsplash.com/photo-1524492412937-b28074a5d7da?w=1920&h=1080&fit=crop')"
-          }}
-        ></div>
-        
-        <motion.div 
-          className="relative z-20 text-center text-white px-4"
-          initial={{ opacity: 0, y: 50 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 1 }}
-        >
-          <h1 className="text-6xl md:text-8xl font-bold mb-6 bg-gradient-to-r from-orange-300 to-red-300 bg-clip-text text-transparent">
-            Discover India
-          </h1>
-          <p className="text-xl md:text-2xl mb-8 max-w-2xl mx-auto">
-            Find your perfect destination with our personalized travel recommendations
-          </p>
-          <Button 
-            onClick={handleStartQuiz}
-            size="lg"
-            className="bg-gradient-to-r from-orange-600 to-red-600 hover:from-orange-700 hover:to-red-700 text-white px-8 py-4 text-lg font-semibold transform hover:scale-105 transition-all duration-300"
+      <section className="py-20 px-4">
+        <div className="max-w-7xl mx-auto text-center">
+          <motion.div
+            initial={{ opacity: 0, y: 30 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8 }}
           >
-            Start Your Journey
-          </Button>
-        </motion.div>
+            <h1 className="text-5xl md:text-7xl font-bold mb-6 bg-gradient-to-r from-orange-600 to-red-600 bg-clip-text text-transparent">
+              Discover India
+            </h1>
+            <p className="text-xl md:text-2xl mb-8 max-w-3xl mx-auto text-gray-700">
+              Select the places you love and get personalized recommendations for your next adventure
+            </p>
+            {selectedPlaces.length > 0 && (
+              <div className="mb-8">
+                <p className="text-lg text-gray-600 mb-4">
+                  Selected: {selectedPlaces.length} places
+                </p>
+                <Button
+                  onClick={handleSubmit}
+                  size="lg"
+                  className="bg-gradient-to-r from-orange-600 to-red-600 hover:from-orange-700 hover:to-red-700 text-white px-8 py-4 text-lg font-semibold transform hover:scale-105 transition-all duration-300"
+                >
+                  Get My Recommendations
+                </Button>
+              </div>
+            )}
+          </motion.div>
+        </div>
       </section>
 
-      {/* Featured Destinations */}
-      <section className="py-20 px-4">
+      {/* All Places Grid */}
+      <section className="py-12 px-4">
         <div className="max-w-7xl mx-auto">
           <motion.div
             initial={{ opacity: 0, y: 30 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8 }}
-            className="text-center mb-16"
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8, delay: 0.2 }}
+            className="text-center mb-12"
           >
-            <h2 className="text-4xl md:text-5xl font-bold text-gray-800 mb-4">
-              Popular Destinations
+            <h2 className="text-4xl font-bold text-gray-800 mb-4">
+              Choose Your Favorite Destinations
             </h2>
             <p className="text-xl text-gray-600 max-w-2xl mx-auto">
-              Explore the most beloved places across incredible India
+              Click on the places you'd love to visit. We'll recommend similar destinations based on your choices.
             </p>
           </motion.div>
 
-          <div className="grid md:grid-cols-3 gap-8">
-            {featuredDestinations.map((destination, index) => (
+          <div className="grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            {places.map((place, index) => (
               <motion.div
-                key={destination.id}
+                key={place.id}
                 initial={{ opacity: 0, y: 50 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.6, delay: index * 0.2 }}
-                whileHover={{ scale: 1.05 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.6, delay: index * 0.05 }}
+                whileHover={{ scale: 1.02 }}
                 className="group cursor-pointer"
+                onClick={() => handlePlaceSelection(place)}
               >
-                <Card className="overflow-hidden border-0 shadow-xl hover:shadow-2xl transition-all duration-300">
-                  <div className="relative h-64 overflow-hidden">
-                    <img 
-                      src={destination.image} 
-                      alt={destination.name}
+                <Card 
+                  className={`overflow-hidden border-2 shadow-lg hover:shadow-xl transition-all duration-300 ${
+                    isSelected(place) 
+                      ? 'border-orange-500 bg-orange-50' 
+                      : 'border-transparent hover:border-orange-300'
+                  }`}
+                >
+                  <div className="relative h-48 overflow-hidden">
+                    <img
+                      src={place.image}
+                      alt={place.name}
                       className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>
-                    <div className="absolute bottom-4 left-4 text-white">
-                      <h3 className="text-2xl font-bold mb-2">{destination.name}</h3>
-                      <p className="text-sm opacity-90">{destination.description}</p>
+                    
+                    {/* Selection indicator */}
+                    {isSelected(place) && (
+                      <div className="absolute top-4 left-4 bg-orange-500 text-white rounded-full p-2">
+                        <Star className="h-4 w-4 fill-current" />
+                      </div>
+                    )}
+                    
+                    <div className="absolute bottom-4 left-4 right-4 text-white">
+                      <h3 className="text-lg font-bold mb-1">{place.name}</h3>
+                      <p className="text-sm opacity-90">{place.state}</p>
                     </div>
                   </div>
+                  <CardContent className="p-4">
+                    <p className="text-gray-600 text-sm mb-3 line-clamp-2">{place.description}</p>
+                    <div className="flex flex-wrap gap-1 mb-3">
+                      <Badge variant="outline" className="text-xs">
+                        {place.type.replace('-', ' ')}
+                      </Badge>
+                      <Badge variant="outline" className="text-xs">
+                        {place.region}
+                      </Badge>
+                      <Badge variant="outline" className="text-xs">
+                        {place.bestSeason}
+                      </Badge>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-1">
+                        <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
+                        <span className="text-sm font-medium">{place.rating}</span>
+                      </div>
+                      {isSelected(place) && (
+                        <Badge className="bg-orange-500 text-white">
+                          Selected
+                        </Badge>
+                      )}
+                    </div>
+                  </CardContent>
                 </Card>
               </motion.div>
             ))}
@@ -172,31 +196,24 @@ const Index = () => {
         </section>
       )}
 
-      {/* CTA Section */}
-      <section className="py-20 px-4 bg-gradient-to-r from-orange-600 to-red-600">
-        <div className="max-w-4xl mx-auto text-center text-white">
+      {/* Fixed Submit Button */}
+      {selectedPlaces.length > 0 && (
+        <div className="fixed bottom-6 left-1/2 transform -translate-x-1/2 z-50">
           <motion.div
-            initial={{ opacity: 0, scale: 0.9 }}
-            whileInView={{ opacity: 1, scale: 1 }}
-            transition={{ duration: 0.8 }}
+            initial={{ opacity: 0, y: 50 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="bg-white rounded-full shadow-2xl p-2"
           >
-            <h2 className="text-4xl md:text-6xl font-bold mb-6">
-              Ready to Explore?
-            </h2>
-            <p className="text-xl mb-8 opacity-90">
-              Take our quick quiz to get personalized recommendations tailored just for you
-            </p>
-            <Button 
-              onClick={handleStartQuiz}
+            <Button
+              onClick={handleSubmit}
               size="lg"
-              variant="outline"
-              className="bg-white text-orange-600 hover:bg-gray-100 px-8 py-4 text-lg font-semibold border-2 border-white transform hover:scale-105 transition-all duration-300"
+              className="bg-gradient-to-r from-orange-600 to-red-600 hover:from-orange-700 hover:to-red-700 text-white px-8 py-4 text-lg font-semibold rounded-full transform hover:scale-105 transition-all duration-300"
             >
-              Get My Recommendations
+              Get Recommendations ({selectedPlaces.length} selected)
             </Button>
           </motion.div>
         </div>
-      </section>
+      )}
     </div>
   );
 };
